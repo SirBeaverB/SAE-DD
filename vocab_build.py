@@ -1,7 +1,7 @@
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 model_name = "EleutherAI/pythia-410m"
-# 410m
+# 410m and 160m seems to have the same vocab
 
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 vocab = tokenizer.get_vocab()

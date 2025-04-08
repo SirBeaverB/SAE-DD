@@ -1,6 +1,6 @@
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
-from sae.sae import *
+from sae.sae import Sae
 from sae.config import *
 from safetensors.torch import load_model
 from pathlib import Path
@@ -8,6 +8,7 @@ from sklearn.metrics import f1_score, accuracy_score, recall_score
 from collections import Counter
 
 sae_name = "EleutherAI/sae-pythia-160m-32k"
+# sae-pythia-410m-65k
 saes = Sae.load_many("EleutherAI/sae-pythia-160m-32k")
 sae = Sae.load_from_hub(sae_name, hookpoint="layers.11")
 

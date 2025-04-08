@@ -763,13 +763,6 @@ mixed_pn = {
     "negative": excited_sentences["negative"] + freedom_sentences["negative"] + knowledge_sentences["negative"] + responsibility_sentences["negative"] + strawberry_sentences["negative"] + apple_sentences["negative"] + love_sentences["negative"]  #140-279
 }
 
-"""print(len(mixed["excited"]))
-print(len(mixed["freedom"]))
-print(len(mixed["knowledge"]))
-print(len(mixed["responsibility"]))
-print(len(mixed["strawberry"]))
-print(len(mixed["apple"]))
-print(len(mixed["love"]))"""
 
 
 model = AutoModelForCausalLM.from_pretrained(model_name)

@@ -20,7 +20,8 @@ model_name = "EleutherAI/pythia-160m"
 saes = Sae.load_many("EleutherAI/sae-llama-3-8b-32x")
 sae = Sae.load_from_hub(sae_name, hookpoint="layers.31")
 
-model_name = "meta-llama/Meta-Llama-3-8B""""
+model_name = "meta-llama/Meta-Llama-3-8B"
+"""
 
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 

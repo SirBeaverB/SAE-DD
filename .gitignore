@@ -174,7 +174,7 @@ cython_debug/
 .pypirc
 
 
-# file too large
+# file too large and not needed
 combined_embeddings_with_tokens.json
 temp_countermap.json
 combined_inverted_embeddings.json

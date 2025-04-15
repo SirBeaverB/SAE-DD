@@ -62,7 +62,7 @@ def invert_embeddings(input_file, output_file):
         # 对每个 embedding 下的 token 列表按照 score 从大到小排序
         sorted_tokens = sorted(embeddings_dict[e_index], key=lambda x: x["score"], reverse=True)
         result_list.append({
-            "feature_index": e_index,
+            "embedding_index": e_index,
             "tokens": sorted_tokens
         })
 

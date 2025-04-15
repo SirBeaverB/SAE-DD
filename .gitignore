@@ -172,3 +172,9 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+
+# file too large
+combined_embeddings_with_tokens.json
+temp_countermap.json
+combined_inverted_embeddings.json

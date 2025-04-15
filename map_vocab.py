@@ -8,13 +8,13 @@ from collections import Counter
 import json
 from tqdm import tqdm
 
-sae_name = "EleutherAI/sae-pythia-410m-65k"
+sae_name = "EleutherAI/sae-pythia-160m-32k"
 # sae-pythia-410m-65k
-saes = Sae.load_many("EleutherAI/sae-pythia-410m-65k")
+saes = Sae.load_many("EleutherAI/sae-pythia-160m-32k")
 sae = Sae.load_from_hub(sae_name, hookpoint="layers.11.mlp")
 
 
-model_name = "EleutherAI/pythia-410m"
+model_name = "EleutherAI/pythia-160m"
 
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 
@@ -64,6 +64,6 @@ print("embeddings with tokens created.")
 chunk_size = 5000
 for i in range(0, len(embs_with_tokens), chunk_size):
     chunk = embs_with_tokens[i:i + chunk_size]
-    file_name = f"embeddings_with_token/embeddings_with_tokens_part_{i // chunk_size + 1}.json"
+    file_name = f"embeddings_with_tokens_160/embeddings_with_tokens_part_{i // chunk_size + 1}.json"
     with open(file_name, "w", encoding="utf-8") as f:
         json.dump(chunk, f, ensure_ascii=False, indent=4)

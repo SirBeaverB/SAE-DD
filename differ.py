@@ -9,12 +9,13 @@ from pathlib import Path
 from collections import Counter
 from sklearn.cluster import SpectralClustering
 
-sae_name = "EleutherAI/sae-pythia-160m-32k"
-saes = Sae.load_many("EleutherAI/sae-pythia-160m-32k")
+sae_name = "EleutherAI/sae-pythia-410m-65k"
+# 410m-65k  or 160m-32k
+saes = Sae.load_many("EleutherAI/sae-pythia-410m-65k")
 sae = Sae.load_from_hub(sae_name, hookpoint="layers.11")
 
 
-model_name = "EleutherAI/pythia-160m"
+model_name = "EleutherAI/pythia-410m"
 
 """sae_name = "EleutherAI/sae-llama-3-8b-32x"
 saes = Sae.load_many("EleutherAI/sae-llama-3-8b-32x")

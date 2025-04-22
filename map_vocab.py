@@ -8,13 +8,13 @@ from collections import Counter
 import json
 from tqdm import tqdm
 
-sae_name = "EleutherAI/sae-pythia-160m-32k"
-# sae-pythia-410m-65k
-saes = Sae.load_many("EleutherAI/sae-pythia-160m-32k")
+sae_name = "EleutherAI/sae-pythia-410m-65k"
+# sae-pythia-160m-32k or sae-pythia-410m-65k
+saes = Sae.load_many(sae_name)
 sae = Sae.load_from_hub(sae_name, hookpoint="layers.11.mlp")
 
 
-model_name = "EleutherAI/pythia-160m"
+model_name = "EleutherAI/pythia-410m"
 
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 
@@ -33,13 +33,17 @@ def read_tokens_to_list(txt_file_path: str) -> list:
     return tokens
 
 
-token_list = read_tokens_to_list("vocab_list_410m.txt")
+list_name = "vocab_list_OLMo2-8B-SuperBPE-t180k"
+token_list = read_tokens_to_list(f"{list_name}.txt")
 print("token_list loaded.")
 
 model = AutoModelForCausalLM.from_pretrained(model_name)
-embs = []
+chunk_size = 2000
+current_chunk = []
+chunk_index = 1
+
 with torch.inference_mode(): # no gradient
-    for token in tqdm(token_list, desc="Processing tokens"):
+    for idx, token in enumerate(tqdm(token_list, desc="Processing tokens")):
         inputs = tokenizer(token, return_tensors="pt")
         outputs = model(**inputs, output_hidden_states=True)
         hidden_states = outputs.hidden_states[-1]  # get last layer
@@ -48,22 +52,21 @@ with torch.inference_mode(): # no gradient
         latent_features_sum[latent_acts.top_indices.flatten()] += latent_acts.top_acts.flatten()  # sum up the latent features
         latent_features_sum /= hidden_states.numel() / hidden_states.shape[-1]  # average
         topk = latent_features_sum.topk(k=32)
-        embs.append(list(zip(topk.indices.tolist(), topk.values.tolist())))  # save indices and scores as tuples
-print("embeddings calculated.")
-
-embs = [set(i) for i in embs]
-embs_with_tokens = []
-for idx, (token, emb_set) in enumerate(zip(token_list, embs)):  # Use the same slice as above
-    embs_with_tokens.append({
-        "index": idx,
-        "token": token,
-        "embeddings": sorted(list(emb_set), key=lambda x: x[1], reverse=True)
-    })
-print("embeddings with tokens created.")
-
-chunk_size = 5000
-for i in range(0, len(embs_with_tokens), chunk_size):
-    chunk = embs_with_tokens[i:i + chunk_size]
-    file_name = f"embeddings_with_tokens_160/embeddings_with_tokens_part_{i // chunk_size + 1}.json"
-    with open(file_name, "w", encoding="utf-8") as f:
-        json.dump(chunk, f, ensure_ascii=False, indent=4)
+        emb_set = set(zip(topk.indices.tolist(), topk.values.tolist()))
+        
+        # Create token entry with sorted embeddings
+        token_entry = {
+            "index": idx,
+            "token": token,
+            "embeddings": sorted(list(emb_set), key=lambda x: x[1], reverse=True)
+        }
+        current_chunk.append(token_entry)
+        
+        # Save chunk when it reaches the desired size
+        if len(current_chunk) >= chunk_size or idx == len(token_list) - 1:
+            file_name = f"embeddings_with_tokens_OLMo2/embeddings_with_tokens_part_{chunk_index}.json"
+            with open(file_name, "w", encoding="utf-8") as f:
+                json.dump(current_chunk, f, ensure_ascii=False, indent=4)
+            print(f"Saved chunk {chunk_index}")
+            current_chunk = []
+            chunk_index += 1

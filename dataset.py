@@ -1,5 +1,6 @@
 from datasets import load_dataset
 import re
+import json
 
 type1_anti = load_dataset("uclanlp/wino_bias", "type1_anti")
 type1_pro = load_dataset("uclanlp/wino_bias", "type1_pro")
@@ -36,8 +37,15 @@ type1_pro_sentences = get_sentences(type1_pro_tokens)
 type2_anti_sentences = get_sentences(type2_anti_tokens)
 type2_pro_sentences = get_sentences(type2_pro_tokens)
 
+saving = [type1_anti_sentences, type1_pro_sentences, type2_anti_sentences, type2_pro_sentences]
+name = ["type1_anti_sentences", "type1_pro_sentences", "type2_anti_sentences", "type2_pro_sentences"]
+for dataset, n in zip(saving, name):
+    file_name = f"wino_sentences/{n}.json"
+    with open(file_name, "w", encoding="utf-8") as f:
+        json.dump(dataset, f, ensure_ascii=False, indent=4)
 
-from transformers import AutoModelForCausalLM, AutoTokenizer
+
+"""from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
 from sae.sae import Sae
 from sae.config import *
@@ -85,7 +93,7 @@ print("embeddings with sentences created.")
 
 file_name = "type1_anti_sentences_with_embeddings.json"
 with open(file_name, "w", encoding="utf-8") as f:
-    json.dump(sentences_with_embeddings, f, ensure_ascii=False, indent=4)
+    json.dump(sentences_with_embeddings, f, ensure_ascii=False, indent=4)"""
 
 
 

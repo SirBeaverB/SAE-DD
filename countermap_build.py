@@ -75,7 +75,7 @@ def invert_embeddings(input_file, output_file):
 
 if __name__ == "__main__":
     # 用法示例：处理当前目录下所有匹配 'embeddings_with_tokens_part_*.json' 的文件
-    input_files = glob.glob("embeddings_with_tokens/embeddings_with_tokens_part_*.json")
+    input_files = glob.glob("embeddings_with_tokens_OLMo2/embeddings_with_tokens_part_*.json")
     combined_data = []
 
     # 先合并所有文件的内容
@@ -97,12 +97,12 @@ if __name__ == "__main__":
     invert_embeddings(combined_data_file, final_output_file)
 
     # 将final_output_file分成多份存储
-    chunk_size = 1000  # 每个文件的大小
+    chunk_size = 500  # 每个文件的大小
     with open(final_output_file, 'r', encoding='utf-8') as f:
         data = json.load(f)
         for i in range(0, len(data), chunk_size):
             chunk = data[i:i + chunk_size]
-            chunk_output_file = f"countermap_parts/countermap_part_{i // chunk_size + 1}.json"
+            chunk_output_file = f"countermap_parts_OLMo2/countermap_part_{i // chunk_size + 1}.json"
             with open(chunk_output_file, 'w', encoding='utf-8') as f:
                 json.dump(chunk, f, ensure_ascii=False, indent=2)
 

@@ -9,12 +9,15 @@ from pathlib import Path
 from collections import Counter
 from sklearn.cluster import SpectralClustering
 
-sae_name = "EleutherAI/sae-pythia-160m-32k"
-saes = Sae.load_many("EleutherAI/sae-pythia-160m-32k")
-sae = Sae.load_from_hub(sae_name, hookpoint="layers.11")
+sae_name = "EleutherAI/sae-pythia-410m-65k"
+# 410m-65k  or 160m-32k
+saes = Sae.load_many("EleutherAI/sae-pythia-410m-65k")
+sae = Sae.load_from_hub(sae_name, hookpoint="layers.11.mlp")
 
 
-model_name = "EleutherAI/pythia-160m"
+
+
+model_name = "EleutherAI/pythia-410m"
 
 """sae_name = "EleutherAI/sae-llama-3-8b-32x"
 saes = Sae.load_many("EleutherAI/sae-llama-3-8b-32x")
@@ -350,15 +353,24 @@ gender2_sentences = {
     ]
 }
 
+import json
 
-sentences_chosen = gender_sentences
-half_length = 40
+with open("wino_sentences/merged_data.json", "r", encoding="utf-8") as f:
+    data = json.load(f)
+
+
+sentences_chosen = data
+#half_length = 40
+banking_length = 792           #2071
+hotel_length = 792             #1009
+
 
 model = AutoModelForCausalLM.from_pretrained(model_name)
 embs = []
 with torch.inference_mode(): # no gradient
-    for pn, sentences in sentences_chosen.items():
-        for sentence in sentences:
+    for pn, sentences in list(sentences_chosen.items())[2:]:
+        from tqdm import tqdm
+        for sentence in tqdm(sentences, desc=f"Processing {pn} sentences"):
             inputs = tokenizer(sentence, return_tensors="pt")
             outputs = model(**inputs, output_hidden_states=True)
 
@@ -376,21 +388,6 @@ with torch.inference_mode(): # no gradient
 
 embs = [set(i.tolist()) for i in embs]
 
-# breakpoint()
-# below is for SAE: see the share of features
-"""from collections import Counter
-most_common = Counter(sum([list(i) for i in embs], [])).most_common(100)
-for key, count in most_common:
-    indices = [idx for idx, i in enumerate(embs) if key in i]
-    print(key, indices, count)"""
-
-# activation of each sentence
-"""i = 1
-for sentence, emb in zip(sentences_chosen["positive"], embs):
-    print(f"{i}. {sentence}")
-    print(emb)
-    print()
-    i += 1"""
 
 
 def indices_to_onehot(indices, total_neurons=32000):
@@ -449,7 +446,7 @@ labels = spectral_model.fit_predict(similarity_matrix_np)
 print("cluster result：", labels)
 
 # 假设真实标签
-true_labels = np.array([0]*half_length + [1]*half_length)
+true_labels = np.array([0]*banking_length + [1]*hotel_length)
 
 # 假设 spectral_model 经过谱聚类得到的预测标签
 predicted_labels = labels  # 这里 labels 是你前面谱聚类得到的结果

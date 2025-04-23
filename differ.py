@@ -18,6 +18,7 @@ sae = Sae.load_from_hub(sae_name, hookpoint="layers.11.mlp")
 
 
 model_name = "EleutherAI/pythia-410m"
+model_name = "EleutherAI/pythia-410m"
 
 """sae_name = "EleutherAI/sae-llama-3-8b-32x"
 saes = Sae.load_many("EleutherAI/sae-llama-3-8b-32x")

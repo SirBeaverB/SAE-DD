@@ -35,7 +35,7 @@ data = [
 indices = extract_indices(data)
 
 # Read JSON files from the directory
-json_directory = 'countermap_parts_OLMo2' 
+json_directory = 'countermap_parts_AVL' 
 json_data = read_json_files(json_directory)
 
 # Map indices to tokens

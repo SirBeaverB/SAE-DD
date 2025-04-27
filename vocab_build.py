@@ -1,4 +1,4 @@
-from transformers import AutoModelForCausalLM, AutoTokenizer
+"""from transformers import AutoModelForCausalLM, AutoTokenizer
 
 
 tokenizer = AutoTokenizer.from_pretrained("UW/OLMo2-8B-SuperBPE-t180k")
@@ -21,4 +21,14 @@ vocab = sorted(vocab, key=lambda x: x[1])
 with open(f"vocab_list_{model_name_txt}.txt", "w", encoding="utf-8") as f:
     for token, idx in vocab:
         f.write(f"Token: {token} -> ID: {idx}\n")
-print(f"Vocabulary list saved to vocab_list_{model_name_txt}.txt")
+print(f"Vocabulary list saved to vocab_list_{model_name_txt}.txt")"""
+
+# Read AVL_adj_only.txt and save in the same format as the commented example
+with open("AVL_adj_only.txt", "r", encoding="utf-8") as f:
+    adj_tokens = f.read().splitlines()
+
+# Save the list to a file in the same format
+with open("vocab_list_AVL.txt", "w", encoding="utf-8") as f:
+    for idx, token in enumerate(adj_tokens):
+        f.write(f"Token: {token} -> ID: {idx}\n")
+print(f"Vocabulary list saved to vocab_list_AVL_adj_only.txt")

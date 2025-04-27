@@ -32,8 +32,8 @@ def read_tokens_to_list(txt_file_path: str) -> list:
                     tokens.append(token_str)
     return tokens
 
-
-list_name = "vocab_list_OLMo2-8B-SuperBPE-t180k"
+wordlist_name = "AVL"
+list_name = f"vocab_list_{wordlist_name}"
 token_list = read_tokens_to_list(f"{list_name}.txt")
 print("token_list loaded.")
 
@@ -64,7 +64,7 @@ with torch.inference_mode(): # no gradient
         
         # Save chunk when it reaches the desired size
         if len(current_chunk) >= chunk_size or idx == len(token_list) - 1:
-            file_name = f"embeddings_with_tokens_OLMo2/embeddings_with_tokens_part_{chunk_index}.json"
+            file_name = f"embeddings_with_tokens_{wordlist_name}/embeddings_with_tokens_part_{chunk_index}.json"
             with open(file_name, "w", encoding="utf-8") as f:
                 json.dump(current_chunk, f, ensure_ascii=False, indent=4)
             print(f"Saved chunk {chunk_index}")

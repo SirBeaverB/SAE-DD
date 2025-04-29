@@ -13,6 +13,7 @@ from sklearn.metrics import accuracy_score, adjusted_rand_score, normalized_mutu
 from scipy.optimize import linear_sum_assignment
 from scipy.stats import chi2_contingency
 from finding_map import get_significant_features
+import os
 
 output_dir = Path("output")
 output_dir.mkdir(exist_ok=True)
@@ -61,6 +62,31 @@ with torch.inference_mode():
 
 embs = [set(i.tolist()) for i in embs]
 
+feature_of_interest = "financial"
+
+def find_feature_in_json(directory, feature):
+    feature_mapping = {}
+    for filename in os.listdir(directory):
+        if filename.endswith('.json'):
+            with open(os.path.join(directory, filename), 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                for item in data:
+                    if item['token'] == feature:
+                        neurons = [embedding[0] for embedding in item['embeddings'][:5]]
+                        feature_mapping[feature] = neurons
+    return feature_mapping
+
+json_directory = 'embeddings_with_tokens_AVL'
+feature_mapping = find_feature_in_json(json_directory, feature_of_interest)
+
+if feature_mapping:
+    print(f"Found tokens for feature {feature_of_interest}:")
+    print(feature_mapping[feature_of_interest])
+else:
+    print(f"No mapping found for feature {feature_of_interest}")
+
+
+# Convert embs to one-hot vectors
 def indices_to_onehot(indices, total_neurons=32000):
     if isinstance(indices, set):
         indices = list(indices)
@@ -77,38 +103,15 @@ for sentence, emb in zip(sentence_flat, embs):
     onehot = indices_to_onehot(emb, total_neurons=sae.encoder.out_features)
     onehots.append(onehot)
 
-    
 # Convert to numpy arrays for easier computation
 first_half_np = torch.stack(onehots[:first_length]).numpy()
 second_half_np = torch.stack(onehots[first_length:]).numpy()
-    
-first_half_means = np.mean(first_half_np, axis=0)
-second_half_means = np.mean(second_half_np, axis=0)
-    
-# Define a threshold for significant mean difference
-threshold = 0.1
 
-# Calculate absolute difference between means
-mean_diffs = np.abs(first_half_means - second_half_means)
+# Calculate means for each feature mapping index across all sentences
+feature_indices = feature_mapping[feature_of_interest]
+first_half_means = np.mean(first_half_np[:, feature_indices], axis=0)
+second_half_means = np.mean(second_half_np[:, feature_indices], axis=0)
 
-# Initialize significant features list
-significant_features = []
-
-# Iterate over mean differences to find significant features
-for feature_id, mean_diff in enumerate(mean_diffs):
-    if mean_diff > threshold:
-        cluster = 0 if first_half_means[feature_id] > second_half_means[feature_id] else 1
-        significant_features.append((feature_id, cluster))
-
-    # Find the feature with maximum difference
-top_k = 10
-# Get indices of top k features with largest differences
-max_diff_indices = np.argsort(mean_diffs)[-top_k:]
-# Get the corresponding values in descending order
-max_diff_features = max_diff_indices[::-1]
-max_diff_value = mean_diffs[max_diff_features]
-
-print(f"Feature with maximum difference: {max_diff_features}")
-print(f"Difference value: {max_diff_value}")
-print(f"First half mean: {first_half_means[max_diff_features]}")
-print(f"Second half mean: {second_half_means[max_diff_features]}")
+# Print the means for each feature index
+print("First half means for feature indices:", first_half_means)
+print("Second half means for feature indices:", second_half_means)

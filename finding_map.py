@@ -25,25 +25,53 @@ def map_indices_to_tokens(indices, json_data):
                 break
     return index_to_tokens
 
-# Example data
-data = [
-    '37950: 0.00000000', '29951: 0.00000000', '49362: 0.00000000', '31787: 0.00000000', '63317: 0.00000000', '7606: 0.00000000', '3770: 0.00000000', '21637: 0.00000000', '17035: 0.00000000', '52157: 0.00000000', '55491: 0.00000000', '33925: 0.00000000', '27483: 0.00000000', '25674: 0.00000000', '4889: 0.00000000', '17225: 0.00000000', '60711: 0.00000000', '14981: 0.00000000', '11268: 0.00000000', '54856: 0.00000000', '27756: 0.00000000', '14655: 0.00000000', '440: 0.00000000', '37068: 0.00000000', '43991: 0.00000000', '46491: 0.00000000', '10141: 0.00000000', '24372: 0.00000000', '51509: 0.00000000', '55880: 0.00000000', '5087: 0.00000000', '30046: 0.00000000', '9564: 0.00000000', '17084: 0.00000000', '4311: 0.00000000', '26076: 0.00000000'
-    
-]
+def get_significant_features(file_path, threshold=0.1):
+    significant_features = []
+    with open(file_path, 'r') as file:
+        lines = file.readlines()
+        for line in lines:
+            if 'Feature' in line:
+                # Split using both ', ' and ': '
+                parts = line.replace(': ', ', ').split(', ')
+                if len(parts) >= 4:  # Ensure there are enough parts to process
+                    feature_id = parts[0].split(' ')[1]
+                    mean_cluster_0 = float(parts[2].split('= ')[1])
+                    mean_cluster_1 = float(parts[3].split('= ')[1])
+                    mean_diff = abs(mean_cluster_0 - mean_cluster_1)
+                    if mean_diff > threshold:
+                        cluster = 0 if mean_cluster_0 > mean_cluster_1 else 1
+                        significant_features.append((feature_id, cluster))
+    return significant_features
 
-# Extract indices
-indices = extract_indices(data)
 
 # Read JSON files from the directory
 json_directory = 'countermap_parts_AVL' 
 json_data = read_json_files(json_directory)
 
+# Example usage
+file_name = "nllb_chat_health"
+file_path = f'output/{file_name}_results.txt'
+significant_features = get_significant_features(file_path)
+
+# Extract indices from the significant features
+indices = [int(feature_id) for feature_id, _ in significant_features]
+
 # Map indices to tokens
 index_to_tokens = map_indices_to_tokens(indices, json_data)
 
-# Save results to JSON file
-output_file = 'index_to_tokens_mapping_news_health.json'
-with open(output_file, 'w', encoding='utf-8') as f:
-    json.dump(index_to_tokens, f, ensure_ascii=False, indent=2)
+# Map significant features to tokens and add cluster information
+significant_index_to_tokens = {}
+for feature_id, cluster in significant_features:
+    index = int(feature_id)  # Convert feature_id to integer
+    if index in index_to_tokens:
+        significant_index_to_tokens[index] = {
+            'tokens': index_to_tokens[index],
+            'cluster': cluster
+        }
 
-print(f"Results saved to {output_file}")
+# Save significant features mapping to JSON file
+significant_output_file = f'map_result/{file_name}_mapping.json'
+with open(significant_output_file, 'w', encoding='utf-8') as f:
+    json.dump(significant_index_to_tokens, f, ensure_ascii=False, indent=2)
+
+print(f"Significant features mapping saved to {significant_output_file}")

@@ -1,0 +1,152 @@
+{
+  "37950": {
+    "tokens": [
+      "pro",
+      "so",
+      "fun",
+      "hip",
+      "Irish",
+      "failed",
+      "special",
+      "Italian",
+      "intent",
+      "fellow"
+    ],
+    "cluster": 0
+  },
+  "49362": {
+    "tokens": [
+      "horizontal",
+      "commercial",
+      "dashed",
+      "initial",
+      "finished",
+      "empty",
+      "minimum",
+      "extra",
+      "whole",
+      "short"
+    ],
+    "cluster": 0
+  },
+  "21637": {
+    "tokens": [
+      "far",
+      "feeding",
+      "median",
+      "toxic",
+      "valid",
+      "serious",
+      "optional",
+      "threatening",
+      "tracking",
+      "mean"
+    ],
+    "cluster": 0
+  },
+  "29951": {
+    "tokens": [
+      "feeding",
+      "chief",
+      "akin",
+      "sure",
+      "resident",
+      "hip",
+      "informed",
+      "producing",
+      "knowing",
+      "smiling"
+    ],
+    "cluster": 1
+  },
+  "31787": {
+    "tokens": [
+      "like",
+      "great",
+      "akin",
+      "called",
+      "fourfold",
+      "soaring",
+      "secluded",
+      "kinematic",
+      "infectious",
+      "contrasting"
+    ],
+    "cluster": 1
+  },
+  "63317": {
+    "tokens": [
+      "political",
+      "professional",
+      "needed",
+      "technical",
+      "criminal",
+      "pleased",
+      "worried",
+      "deaf",
+      "glad",
+      "Tory"
+    ],
+    "cluster": 1
+  },
+  "7606": {
+    "tokens": [
+      "molecular",
+      "return",
+      "public",
+      "right",
+      "left",
+      "called",
+      "private",
+      "traditional",
+      "American",
+      "experimental"
+    ],
+    "cluster": 1
+  },
+  "3770": {
+    "tokens": [
+      "fun",
+      "Muslim",
+      "old",
+      "young",
+      "foreign",
+      "Indian",
+      "brown",
+      "Christian",
+      "educated",
+      "elected"
+    ],
+    "cluster": 1
+  },
+  "17035": {
+    "tokens": [
+      "great",
+      "threatening",
+      "historic",
+      "corresponding",
+      "federal",
+      "significant",
+      "similar",
+      "lasting",
+      "different",
+      "essential"
+    ],
+    "cluster": 1
+  },
+  "55491": {
+    "tokens": [
+      "controlled",
+      "guided",
+      "natal",
+      "Jewish",
+      "western",
+      "intestinal",
+      "frontal",
+      "conditioned",
+      "cold",
+      "trained"
+    ],
+    "cluster": 1
+  }
+}

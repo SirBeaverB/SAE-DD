@@ -33,20 +33,21 @@ model_name = "meta-llama/Meta-Llama-3-8B"
 """
 
 tokenizer = AutoTokenizer.from_pretrained(model_name)
+dataname = "nllb_news_health"
 
-with open("wino_sentences/merged_data.json", "r", encoding="utf-8") as f:
+with open("nllb_domain_sentences.json", "r", encoding="utf-8") as f:
     data = json.load(f)
 
 sentences_chosen = data
 #half_length = 40
-banking_length = 792           #2071
-hotel_length = 792             #1009
+banking_length = 2000           #2071 for banking, 792 for wino, 2000 for nllb
+hotel_length = 2000             #1009 for hotel, 792 for wino, 2000 for nllb
 
 
 model = AutoModelForCausalLM.from_pretrained(model_name)
 embs = []
 with torch.inference_mode():
-    for pn, sentences in list(sentences_chosen.items())[2:]:
+    for pn, sentences in list(sentences_chosen.items())[1:]:
         from tqdm import tqdm
         for sentence in tqdm(sentences, desc=f"Processing {pn} sentences"):
             inputs = tokenizer(sentence, return_tensors="pt")
@@ -118,6 +119,7 @@ X_np = onehots_tensor.numpy()
 def feature_significance(X, labels):
     n_features = X.shape[1]
     p_values = []
+    feature_means = np.zeros((2, n_features))
     for i in range(n_features):
         contingency_table = np.zeros((2, 2))
         for cluster in [0, 1]:
@@ -126,18 +128,22 @@ def feature_significance(X, labels):
             count_0 = np.sum(1 - X[cluster_indices, i])
             contingency_table[cluster, 0] = count_0
             contingency_table[cluster, 1] = count_1
+            
+            feature_means[cluster, i] = np.mean(X[cluster_indices, i])
+        
         contingency_table += 1e-8
         chi2, p, dof, expected = chi2_contingency(contingency_table)
         p_values.append(p)
-    return np.array(p_values)
+    
+    return np.array(p_values), feature_means
 
-p_values = feature_significance(X_np, labels)
-significant_features = np.where(p_values < 0.05)[0]
+p_values, feature_means = feature_significance(X_np, labels)
+significant_features = np.where(p_values < 0.01)[0]
 sorted_idx = np.argsort(p_values[significant_features])
 top_features = significant_features[sorted_idx]
 
 # 保存所有结果到一个文件
-with (output_dir / "analysis_results.txt").open("w") as f:
+with (output_dir / f"{dataname}_results.txt").open("w") as f:
     f.write("\n=== Cluster Labels ===\n")
     f.write(" ".join(map(str, labels)) + "\n")
     
@@ -146,6 +152,14 @@ with (output_dir / "analysis_results.txt").open("w") as f:
     f.write(f"Normalized Mutual Information (NMI): {nmi}\n")
     f.write(f"Clustering Accuracy: {acc}\n")
     
-    f.write("\n=== Significant Features ===\n")
+    f.write("\n=== Significant Features for Cluster 0 ===\n")
     for i in top_features:
-        f.write(f"{i}: {p_values[i]:.8f}\n")
+        if feature_means[0, i] > feature_means[1, i]:
+            f.write(f"Feature {i}: p-value = {p_values[i]:.8f}, Mean in Cluster 0 = {feature_means[0, i]:.8f}, Mean in Cluster 1 = {feature_means[1, i]:.8f}\n")
+    
+    f.write("\n=== Significant Features for Cluster 1 ===\n")
+    for i in top_features:
+        if feature_means[1, i] > feature_means[0, i]:
+            f.write(f"Feature {i}: p-value = {p_values[i]:.8f}, Mean in Cluster 0 = {feature_means[0, i]:.8f}, Mean in Cluster 1 = {feature_means[1, i]:.8f}\n")
+
+print(f"Results saved to {output_dir / f'{dataname}_results.txt'}")

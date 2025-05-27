@@ -1,58 +1,69 @@
 from datasets import load_dataset
+import json
 
 ds = load_dataset("OpenAssistant/oasst1")
 
 # 获取训练集
 train_data = ds["train"]
 
+# filter out samples that are not in English
+train_data = [example for example in train_data if example['lang'] == 'en']
 
-# 获取humor标签的索引
+label_name = "violence"
+
+# 获取标签的索引
 first_example = train_data[0]
-humor_index = first_example['labels']['name'].index('humor')
+label_index = first_example['labels']['name'].index(label_name)
 
 
-# 统计所有humor值的分布（排除无效样本）
-humor_values = []
+# 统计所有标签值的分布（排除无效样本）
+label_values = []
 for example in train_data:
     if example['labels'] is not None:
-        if len(example['labels']['value']) < 10:
-            if 'humor' in example['labels']['name']:
-                humor_idx = example['labels']['name'].index('humor')
-                if humor_idx < len(example['labels']['value']):
-                    humor_values.append(example['labels']['value'][humor_idx])
+        if len(example['labels']['value']) < 11:
+            if label_name in example['labels']['name']:
+                label_idx = example['labels']['name'].index(label_name)
+                if label_idx < len(example['labels']['value']):
+                    label_values.append(example['labels']['value'][label_idx])
         else:
-            humor_values.append(example['labels']['value'][humor_index])
+            label_values.append(example['labels']['value'][label_index])
 
-print(f"\n总样本数: {len(humor_values)}")
-print(f"幽默度值范围: {min(humor_values):.3f} - {max(humor_values):.3f}")
-print(f"平均幽默度: {sum(humor_values)/len(humor_values):.3f}")
+print(f"\n总样本数: {len(label_values)}")
+print(f"标签值范围: {min(label_values):.3f} - {max(label_values):.3f}")
+print(f"平均标签值: {sum(label_values)/len(label_values):.3f}")
 
 # 使用0.3作为阈值（因为看到示例中humor值在0.3左右）
 threshold = 0.5
-high_humor = []
-low_humor = []
+high_label = []
+low_label = []
 
 for example in train_data:
-    if example['labels'] is not None and len(example['labels']['value']) > humor_index:
-        humor_value = example['labels']['value'][humor_index]
-        if humor_value > threshold:
-            high_humor.append(example)
+    if example['labels'] is not None and len(example['labels']['value']) > label_index:
+        label_value = example['labels']['value'][label_index]
+        if label_value > threshold:
+            high_label.append({
+                'text': example['text'],
+                'label_value': label_value
+            })
         else:
-            low_humor.append(example)
+            low_label.append({
+                'text': example['text'],
+                'label_value': label_value
+            })
 
 print(f"\n使用阈值 {threshold}:")
-print(f"高幽默度样本数量: {len(high_humor)}")
-print(f"低幽默度样本数量: {len(low_humor)}")
+print(f"高标签值样本数量: {len(high_label)}")
+print(f"低标签值样本数量: {len(low_label)}")
 
-# 打印一些示例
-print("\n高幽默度示例:")
-for i, example in enumerate(high_humor[:1]):
-    print(f"\n示例 {i+1}:")
-    print(f"文本: {example['text']}")
-    print(f"幽默度: {example['labels']['value'][humor_index]:.3f}")
+# save high label data in chunks
+chunk_size = 2000
+for i in range(0, len(high_label), chunk_size):
+    chunk = high_label[i:i + chunk_size]
+    with open(f'oasst1_{label_name}/high_{label_name}_{i//chunk_size}.json', 'w') as f:
+        json.dump(chunk, f)
 
-print("\n低幽默度示例:")
-for i, example in enumerate(low_humor[:1]):
-    print(f"\n示例 {i+1}:")
-    print(f"文本: {example['text']}")
-    print(f"幽默度: {example['labels']['value'][humor_index]:.3f}")
+'''# save low label data in chunks
+for i in range(0, len(low_label), chunk_size):
+    chunk = low_label[i:i + chunk_size]
+    with open(f'oasst1_{label_name}/low_{label_name}_{i//chunk_size}.json', 'w') as f:
+        json.dump(chunk, f)'''

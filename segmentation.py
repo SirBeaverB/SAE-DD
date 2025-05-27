@@ -45,13 +45,16 @@ first_length = 792           #2071 for banking, 792 for wino, 2000 for nllb
 second_length = 792             #1009 for hotel, 792 for wino, 2000 for nllb
 
 
-model = AutoModelForCausalLM.from_pretrained(model_name)
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model = AutoModelForCausalLM.from_pretrained(model_name).to(device)
+sae = sae.to(device)
 embs = []
 with torch.inference_mode():
     for pn, sentences in list(sentences_chosen.items())[::2]:
         from tqdm import tqdm
         for sentence in tqdm(sentences, desc=f"Processing {pn} sentences"):
             inputs = tokenizer(sentence, return_tensors="pt")
+            inputs = inputs.to(device)
             outputs = model(**inputs, output_hidden_states=True)
             hidden_states = outputs.hidden_states[-1]
             latent_acts = sae.encode(hidden_states)

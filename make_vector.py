@@ -22,14 +22,14 @@ def load_token_embeddings_to_vector(json_path):
         if not embeddings:
             token_embeddings[token] = []
             continue
-        max_index = 66530
+        max_index = 66530 # for AVL
         vector = [0.0] * (max_index + 1)
         for idx, value in embeddings:
             vector[idx] = value
         token_embeddings[token] = vector
     return token_embeddings
 
-file_path = 'embeddings_with_tokens_AVL/'
+file_path = 'vocabs/AVL/embeddings_with_tokens_AVL/'
 token_embeddings = load_token_embeddings_to_vector(file_path)
 
 # 将token_embeddings字典保存为JSON文件

@@ -33,11 +33,14 @@ def read_tokens_to_list(txt_file_path: str) -> list:
     return tokens
 
 wordlist_name = "AVL"
-list_name = f"vocab_list_{wordlist_name}"
+list_name = f"vocabs/{wordlist_name}/vocab_list_{wordlist_name}"
 token_list = read_tokens_to_list(f"{list_name}.txt")
 print("token_list loaded.")
 
-model = AutoModelForCausalLM.from_pretrained(model_name)
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model = AutoModelForCausalLM.from_pretrained(model_name).to(device)
+sae = sae.to(device)
+
 chunk_size = 2000
 current_chunk = []
 chunk_index = 1
@@ -45,6 +48,7 @@ chunk_index = 1
 with torch.inference_mode(): # no gradient
     for idx, token in enumerate(tqdm(token_list, desc="Processing tokens")):
         inputs = tokenizer(token, return_tensors="pt")
+        inputs = inputs.to(device)
         outputs = model(**inputs, output_hidden_states=True)
         hidden_states = outputs.hidden_states[-1]  # get last layer
         latent_acts = sae.encode(hidden_states)  # put into SAE

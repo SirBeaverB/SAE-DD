@@ -1,0 +1,10 @@
+{
+  "true_positives": 1070,
+  "false_positives": 28273,
+  "false_negatives": 322,
+  "precision": 0.03646525576798555,
+  "recall": 0.7686781609195402,
+  "f1_score": 0.06962746054986173,
+  "ground_truth_count": 1392,
+  "predicted_count": 29343
+}

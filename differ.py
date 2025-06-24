@@ -1,6 +1,7 @@
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
 import torch.nn.functional as F
+import torch.nn as nn
 import numpy as np
 from sae.sae import *
 from sae.config import *
@@ -12,6 +13,7 @@ import json
 from sklearn.metrics import accuracy_score, adjusted_rand_score, normalized_mutual_info_score
 from scipy.optimize import linear_sum_assignment
 from scipy.stats import chi2_contingency
+import os
 
 # 创建输出目录
 output_dir = Path("output")
@@ -44,23 +46,59 @@ banking_length = 2000           #2071 for banking, 792 for wino, 2000 for nllb
 hotel_length = 2000             #1009 for hotel, 792 for wino, 2000 for nllb
 
 
+# 检查可用的GPU数量
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+num_gpus = torch.cuda.device_count() if torch.cuda.is_available() else 0
+print(f"Available GPUs: {num_gpus}")
+
+# 加载模型到GPU
 model = AutoModelForCausalLM.from_pretrained(model_name).to(device)
 sae = sae.to(device)
+
+# 如果有多个GPU，使用DataParallel
+if num_gpus > 1:
+    print(f"Using {num_gpus} GPUs with DataParallel")
+    model = nn.DataParallel(model)
+    sae = nn.DataParallel(sae)
+
+# 批处理大小，可以根据GPU内存调整
+batch_size = 8 if num_gpus > 0 else 1
+
+
 embs = []
 with torch.inference_mode():
     for pn, sentences in list(sentences_chosen.items())[1:]:
         from tqdm import tqdm
-        for sentence in tqdm(sentences, desc=f"Processing {pn} sentences"):
-            inputs = tokenizer(sentence, return_tensors="pt")
+        
+        # 将句子分批处理
+        for i in tqdm(range(0, len(sentences), batch_size), desc=f"Processing {pn} sentences"):
+            batch_sentences = sentences[i:i+batch_size]
+            
+            # 批量tokenize
+            inputs = tokenizer(batch_sentences, return_tensors="pt", padding=True, truncation=True)
             inputs = inputs.to(device)
+            
             outputs = model(**inputs, output_hidden_states=True)
             hidden_states = outputs.hidden_states[-1]
-            latent_acts = sae.encode(hidden_states)
-            latent_features_sum = torch.zeros(sae.encoder.out_features).to(sae.encoder.weight.device)
-            latent_features_sum[latent_acts.top_indices.flatten()] += latent_acts.top_acts.flatten()
-            latent_features_sum /= hidden_states.numel() / hidden_states.shape[-1]
-            embs.append(latent_features_sum.topk(k=32).indices)
+            
+            # 处理每个样本的隐藏状态
+            batch_embs = []
+            for j in range(hidden_states.size(0)):
+                # 获取当前样本的隐藏状态
+                sample_hidden = hidden_states[j:j+1]
+                
+                # 使用SAE编码
+                if num_gpus > 1:
+                    latent_acts = sae.module.encode(sample_hidden)
+                else:
+                    latent_acts = sae.encode(sample_hidden)
+                
+                latent_features_sum = torch.zeros(sae.module.encoder.out_features if num_gpus > 1 else sae.encoder.out_features).to(device)
+                latent_features_sum[latent_acts.top_indices.flatten()] += latent_acts.top_acts.flatten()
+                latent_features_sum /= sample_hidden.numel() / sample_hidden.shape[-1]
+                batch_embs.append(latent_features_sum.topk(k=32).indices)
+            
+            embs.extend(batch_embs)
 
 embs = [set(i.tolist()) for i in embs]
 
@@ -77,7 +115,8 @@ onehots = []
 sentence_flat = sum(sentences_chosen.values(), [])
 
 for sentence, emb in zip(sentence_flat, embs):
-    onehot = indices_to_onehot(emb, total_neurons=sae.encoder.out_features)
+    total_neurons = sae.module.encoder.out_features if num_gpus > 1 else sae.encoder.out_features
+    onehot = indices_to_onehot(emb, total_neurons=total_neurons)
     onehots.append(onehot)
 
 onehots_tensor = torch.stack(onehots).float()

@@ -1,0 +1,16 @@
+{
+  "neuron_type": "humorous",
+  "target_neurons": [
+    29951,
+    17035,
+    42246,
+    43522,
+    33925
+  ],
+  "total_samples": 39283,
+  "mean_score": 0.016397961192234158,
+  "median_score": 0.012404640018939973,
+  "std_score": 0.02218371599283876,
+  "min_score": 0.0,
+  "max_score": 0.8520030736923218
+}

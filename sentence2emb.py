@@ -21,18 +21,9 @@ output_dir.mkdir(exist_ok=True)
 
 sae_name = "EleutherAI/sae-pythia-410m-65k"
 # 410m-65k  or 160m-32k
-saes = Sae.load_many("EleutherAI/sae-pythia-410m-65k")
 sae = Sae.load_from_hub(sae_name, hookpoint="layers.11.mlp")
 
 model_name = "EleutherAI/pythia-410m"
-
-
-"""sae_name = "EleutherAI/sae-llama-3-8b-32x"
-saes = Sae.load_many("EleutherAI/sae-llama-3-8b-32x")
-sae = Sae.load_from_hub(sae_name, hookpoint="layers.31")
-
-model_name = "meta-llama/Meta-Llama-3-8B"
-"""
 
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 # Set padding token if it doesn't exist
@@ -62,10 +53,6 @@ for file_path in json_files:
 print(f"Loaded {len(data)} total samples from {len(json_files)} files")
 
 sentences_chosen = data
-#half_length = 40
-first_length = 792           #2071 for banking, 792 for wino, 2000 for nllb
-second_length = 792             #1009 for hotel, 792 for wino, 2000 for nllb
-
 
 # 检查可用的GPU数量
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -73,18 +60,23 @@ num_gpus = torch.cuda.device_count() if torch.cuda.is_available() else 0
 print(f"Available GPUs: {num_gpus}")
 
 # 加载模型到GPU
+try:
 model = AutoModelForCausalLM.from_pretrained(model_name).to(device)
 sae = sae.to(device)
+    print(f"Models loaded successfully on {device}")
+except Exception as e:
+    print(f"Error loading models: {e}")
+    raise
 
 # 启用多GPU处理
 if num_gpus > 1:
     print(f"Using {num_gpus} GPUs with DataParallel")
     model = nn.DataParallel(model)
     sae = nn.DataParallel(sae)
-    batch_size = 8 * num_gpus  # 多GPU时增加批处理大小
+    batch_size = 4 * num_gpus  # 减少批处理大小以避免内存问题
 else:
     print(f"Using single GPU: {device}")
-    batch_size = 2
+    batch_size = 1  # 减少批处理大小以确保稳定性
 
 print(f"Batch size: {batch_size}")
 
@@ -102,6 +94,7 @@ with torch.inference_mode():
     
     # 将句子分批处理
     for i in tqdm(range(0, len(sentences_chosen), batch_size), desc="Processing sentence batches"):
+        try:
         batch_sentences = sentences_chosen[i:i+batch_size]
         
         # 批量tokenize
@@ -110,10 +103,17 @@ with torch.inference_mode():
         
         outputs = model(**inputs, output_hidden_states=True)
         hidden_states = outputs.hidden_states[-1]
+        except Exception as e:
+            print(f"Error processing batch {i}: {e}")
+            # 清理内存并继续
+            torch.cuda.empty_cache()
+            gc.collect()
+            continue
         
         # 处理每个样本的隐藏状态
         batch_embs = []
         for j in range(hidden_states.size(0)):
+            try:
             # 获取当前样本的隐藏状态
             sample_hidden = hidden_states[j:j+1]
             
@@ -128,25 +128,47 @@ with torch.inference_mode():
             latent_features_sum = torch.zeros(encoder_features).to(device)
             latent_features_sum[latent_acts.top_indices.flatten()] += latent_acts.top_acts.flatten()
             latent_features_sum /= sample_hidden.numel() / sample_hidden.shape[-1]
-            batch_embs.append(latent_features_sum.topk(k=128).indices)
+                
+                # 获取top-k的indices和scores
+                top_k_values, top_k_indices = latent_features_sum.topk(k=128)
+                
+                # 将indices和scores组合成字典格式
+                neuron_data = {}
+                for idx, score in zip(top_k_indices.tolist(), top_k_values.tolist()):
+                    neuron_data[idx] = score
+                
+                batch_embs.append(neuron_data)
+            except Exception as e:
+                print(f"Error processing sample {j} in batch {i}: {e}")
+                # 添加空的neuron_data作为占位符
+                batch_embs.append({})
+                continue
         
-        # 转换并添加到结果列表
-        batch_embs_converted = [set(emb.tolist()) for emb in batch_embs]
-        embs.extend(batch_embs_converted)
-        processed_count += len(batch_embs_converted)
+        # 添加到结果列表
+        embs.extend(batch_embs)
+        processed_count += len(batch_embs)
         
         # 每处理chunk_size个样本就保存一次
         if processed_count >= chunk_size:
             chunk_start = len(embs) - processed_count
             chunk = embs[chunk_start:]
+            
+            # 保存包含indices和scores的数据
             chunk_save_path = output_dir / f"{dataname}_embs_chunk_{len(embs)//chunk_size}.json"
             with open(chunk_save_path, "w", encoding="utf-8") as f:
-                json.dump([list(emb) for emb in chunk], f, ensure_ascii=False, indent=2)
+                json.dump(chunk, f, ensure_ascii=False, indent=2)
+            
             print(f"已保存第 {len(embs)//chunk_size} 个chunk，包含 {len(chunk)} 个样本")
             processed_count = 0
         
         # 清理GPU内存
-        del inputs, outputs, hidden_states, batch_embs, batch_embs_converted
+        try:
+            del inputs, outputs, hidden_states, batch_embs
+            torch.cuda.empty_cache()
+            gc.collect()
+        except Exception as e:
+            print(f"Warning: Error during memory cleanup: {e}")
+            # 强制清理
         torch.cuda.empty_cache()
         gc.collect()
 
@@ -154,9 +176,12 @@ with torch.inference_mode():
 if processed_count > 0:
     chunk_start = len(embs) - processed_count
     chunk = embs[chunk_start:]
+    
+    # 保存包含indices和scores的数据
     chunk_save_path = output_dir / f"{dataname}_embs_chunk_{len(embs)//chunk_size + 1}.json"
     with open(chunk_save_path, "w", encoding="utf-8") as f:
-        json.dump([list(emb) for emb in chunk], f, ensure_ascii=False, indent=2)
+        json.dump(chunk, f, ensure_ascii=False, indent=2)
+    
     print(f"已保存最后一个chunk，包含 {len(chunk)} 个样本")
 
 print(f"总共处理了 {len(embs)} 个样本")

@@ -29,7 +29,7 @@ tokenizer = AutoTokenizer.from_pretrained(model_name)
 # Set padding token if it doesn't exist
 if tokenizer.pad_token is None:
     tokenizer.pad_token = tokenizer.eos_token
-dataname = "oasst1"
+dataname = "csqa"
 
 '''with open("wino_sentences/merged_data.json", "r", encoding="utf-8") as f:
     data = json.load(f)'''
@@ -40,7 +40,7 @@ import glob
 import os
 
 # Get all json files in the oasst1_all directory
-json_files = glob.glob("oasst1_all/oasst1_text_with_index_*.json")
+json_files = glob.glob("csqa_sentences.json")
 json_files.sort()  # Sort to ensure consistent order
 
 # Load all files
@@ -61,8 +61,8 @@ print(f"Available GPUs: {num_gpus}")
 
 # 加载模型到GPU
 try:
-model = AutoModelForCausalLM.from_pretrained(model_name).to(device)
-sae = sae.to(device)
+    model = AutoModelForCausalLM.from_pretrained(model_name).to(device)
+    sae = sae.to(device)
     print(f"Models loaded successfully on {device}")
 except Exception as e:
     print(f"Error loading models: {e}")
@@ -94,15 +94,17 @@ with torch.inference_mode():
     
     # 将句子分批处理
     for i in tqdm(range(0, len(sentences_chosen), batch_size), desc="Processing sentence batches"):
+        if i > 100:
+            break
         try:
-        batch_sentences = sentences_chosen[i:i+batch_size]
+            batch_sentences = sentences_chosen[i:i+batch_size]
         
-        # 批量tokenize
-        inputs = tokenizer(batch_sentences, return_tensors="pt", padding=True, truncation=True, max_length=512)  # 添加最大长度限制
-        inputs = inputs.to(device)
+            # 批量tokenize
+            inputs = tokenizer(batch_sentences, return_tensors="pt", padding=True, truncation=True, max_length=512)  # 添加最大长度限制
+            inputs = inputs.to(device)
         
-        outputs = model(**inputs, output_hidden_states=True)
-        hidden_states = outputs.hidden_states[-1]
+            outputs = model(**inputs, output_hidden_states=True)
+            hidden_states = outputs.hidden_states[-1]
         except Exception as e:
             print(f"Error processing batch {i}: {e}")
             # 清理内存并继续
@@ -114,23 +116,23 @@ with torch.inference_mode():
         batch_embs = []
         for j in range(hidden_states.size(0)):
             try:
-            # 获取当前样本的隐藏状态
-            sample_hidden = hidden_states[j:j+1]
-            
-            # 使用SAE编码
-            if num_gpus > 1:
-                latent_acts = sae.module.encode(sample_hidden)
-                encoder_features = sae.module.encoder.out_features
-            else:
-                latent_acts = sae.encode(sample_hidden)
-                encoder_features = sae.encoder.out_features
-            
-            latent_features_sum = torch.zeros(encoder_features).to(device)
-            latent_features_sum[latent_acts.top_indices.flatten()] += latent_acts.top_acts.flatten()
-            latent_features_sum /= sample_hidden.numel() / sample_hidden.shape[-1]
+                # 获取当前样本的隐藏状态
+                sample_hidden = hidden_states[j:j+1]
+                
+                # 使用SAE编码
+                if num_gpus > 1:
+                    latent_acts = sae.module.encode(sample_hidden)
+                    encoder_features = sae.module.encoder.out_features
+                else:
+                    latent_acts = sae.encode(sample_hidden)
+                    encoder_features = sae.encoder.out_features
+                
+                latent_features_sum = torch.zeros(encoder_features).to(device)
+                latent_features_sum[latent_acts.top_indices.flatten()] += latent_acts.top_acts.flatten()
+                latent_features_sum /= sample_hidden.numel() / sample_hidden.shape[-1]
                 
                 # 获取top-k的indices和scores
-                top_k_values, top_k_indices = latent_features_sum.topk(k=128)
+                top_k_values, top_k_indices = latent_features_sum.topk(k=32)
                 
                 # 将indices和scores组合成字典格式
                 neuron_data = {}

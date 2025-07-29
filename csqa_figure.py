@@ -1,0 +1,138 @@
+import json
+import os
+import matplotlib.pyplot as plt
+import numpy as np
+from collections import Counter
+import glob
+
+def analyze_embedding_indices():
+    """
+    读取csqa_embs目录中的所有JSON文件，统计embedding index的出现次数
+    """
+    # 获取所有JSON文件路径
+    json_files = glob.glob('csqa_embs/*.json')
+    
+    if not json_files:
+        print("在csqa_embs目录中没有找到JSON文件")
+        return
+    
+    print(f"找到 {len(json_files)} 个JSON文件")
+    
+    # 用于统计所有embedding index的计数器
+    all_indices = []
+    
+    # 遍历每个JSON文件
+    for file_path in json_files:
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            
+            # 根据实际JSON结构处理数据
+            if isinstance(data, list):
+                # 遍历列表中的每个字典
+                for item in data:
+                    if isinstance(item, dict):
+                        # 提取字典的键作为embedding indices
+                        indices = list(item.keys())
+                        all_indices.extend(indices)
+            
+            print(f"处理文件: {file_path}, 提取了 {len(data) if isinstance(data, list) else 0} 个embedding")
+            
+        except Exception as e:
+            print(f"处理文件 {file_path} 时出错: {e}")
+    
+    if not all_indices:
+        print("没有找到有效的embedding index数据")
+        return
+    
+    # 统计每个index的出现次数
+    index_counts = Counter(all_indices)
+    
+    # 打印统计结果
+    print(f"\n总共找到 {len(all_indices)} 个embedding index")
+    print(f"唯一index数量: {len(index_counts)}")
+    print(f"\n最常见的10个index:")
+    for index, count in index_counts.most_common(10):
+        print(f"Index {index}: {count} 次")
+    
+    # 生成统计图
+    create_statistics_plots(index_counts)
+
+def create_statistics_plots(index_counts):
+    """
+    创建统计图表
+    """
+
+    
+    # 创建图形
+    fig, ((ax1, ax2)) = plt.subplots(1, 2, figsize=(15, 12))
+    
+    # 1. 前20个最常见index的柱状图
+    top_20 = index_counts.most_common(20)
+    indices, counts = zip(*top_20)
+    
+    ax1.bar(range(len(indices)), counts, color='skyblue', alpha=0.7)
+    ax1.set_title('20 most common Embedding Index')
+    ax1.set_xlabel('Index')
+    ax1.set_ylabel('Occurrence')
+    ax1.set_xticks(range(len(indices)))
+    ax1.set_xticklabels(indices, rotation=45)
+    ax1.set_ylim(0, 10000)
+    
+    # 2. 所有index的分布散点图
+    all_indices = list(index_counts.keys())
+    all_counts = list(index_counts.values())
+    
+    # 将index转换为数值，保持原始顺序
+    numeric_indices = [int(idx) for idx in all_indices]
+    
+    ax2.scatter(numeric_indices, all_counts, alpha=0.6, s=20, color='skyblue')
+    ax2.set_xlabel('Embedding Index')
+    ax2.set_ylabel('Occurrence')
+    ax2.set_title('All Embedding Index occurrence distribution')
+    ax2.grid(True, alpha=0.3)
+    ax2.set_ylim(0, 10000)
+    
+    plt.tight_layout()
+    plt.savefig('csqa_embs/embedding_statistics.png', dpi=300, bbox_inches='tight')
+    plt.show()
+    
+    print(f"\n统计图已保存为: csqa_embs/embedding_statistics.png")
+    
+    # 保存详细统计结果到文件
+    save_detailed_statistics(index_counts)
+
+def save_detailed_statistics(index_counts):
+    """
+    保存详细的统计结果到文件
+    """
+    with open('csqa_embs/embedding_statistics.txt', 'w', encoding='utf-8') as f:
+        f.write("Embedding Index statistics\n")
+        f.write("=" * 50 + "\n\n")
+        
+        total_occurrence = sum(index_counts.values())
+        unique_indices = len(index_counts)
+        avg_occurrence = total_occurrence / unique_indices
+        max_occurrence = max(index_counts.values())
+        min_occurrence = min(index_counts.values())
+        occurrences = list(index_counts.values())
+        variance = np.var(occurrences)
+        range_occurrence = max_occurrence - min_occurrence
+
+        f.write(f"Total occurrence: {total_occurrence}\n")
+        f.write(f"undead index number: {unique_indices}\n")
+        f.write(f"Average occurrence: {avg_occurrence:.2f}\n")
+        f.write(f"Maximum occurrence: {max_occurrence}\n")
+        f.write(f"Minimum occurrence: {min_occurrence}\n")
+        f.write(f"Occurrence variance: {variance:.2f}\n")
+        f.write(f"Occurrence range: {range_occurrence}\n\n")
+        
+        f.write("All Index statistics (sorted by occurrence):\n")
+        f.write("-" * 30 + "\n")
+        for index, count in index_counts.most_common():
+            f.write(f"Index {index}: {count} times\n")
+    
+    print("详细统计结果已保存为: csqa_embs/embedding_statistics.txt")
+
+if __name__ == "__main__":
+    analyze_embedding_indices()

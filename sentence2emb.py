@@ -94,8 +94,8 @@ with torch.inference_mode():
     
     # 将句子分批处理
     for i in tqdm(range(0, len(sentences_chosen), batch_size), desc="Processing sentence batches"):
-        if i > 100:
-            break
+        '''if i > 100:
+            break'''
         try:
             batch_sentences = sentences_chosen[i:i+batch_size]
         

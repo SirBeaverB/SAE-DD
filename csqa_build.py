@@ -4,7 +4,7 @@ import os
 
 ds = load_dataset("tau/commonsense_qa")
 
-train_data = ds["train"]
+train_data = ds["validation"]
 
 '''
 {'id': '075e483d21c29a511267ef62bedc0461',
@@ -47,7 +47,7 @@ def process_data(data):
 processed_train_data = process_data(train_data)
 
 # 保存处理后的数据
-with open('csqa_sentences.json', 'w', encoding='utf-8') as f:
+with open('csqa_test_sentences.json', 'w', encoding='utf-8') as f:
     json.dump(processed_train_data, f, ensure_ascii=False, indent=2)
 
 # 打印前几个样本作为示例
@@ -57,8 +57,8 @@ for i, item in enumerate(processed_train_data[:3]):
     print(json.dumps(item, ensure_ascii=False, indent=2))
 
 print(f"\n总共处理了 {len(processed_train_data)} 个样本")
-print("数据已保存到 csqa_sentences.json")
-print(f"文件大小为 {os.path.getsize('csqa_sentences.json') / 1024 / 1024:.2f} MB")
+print("数据已保存到 csqa_test_sentences.json")
+print(f"文件大小为 {os.path.getsize('csqa_test_sentences.json') / 1024 / 1024:.2f} MB")
 
 '''
 原始数据格式:

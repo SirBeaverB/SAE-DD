@@ -181,3 +181,4 @@ combined_inverted_embeddings.json
 cosine_similarity_matrix.txt
 AVL_token_vector.json
 wandb/
+finetune/

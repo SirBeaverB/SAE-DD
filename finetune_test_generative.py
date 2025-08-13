@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Test script for fine-tuned GPT-2 model on CSQA test sentences with accuracy calculation
+Test script for fine-tuned model on CSQA test sentences with accuracy calculation
 """
 
 import json
